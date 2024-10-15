@@ -1,16 +1,23 @@
 package main
 
 import (
-	"fmt"
 	env "image_filter_server/config"
+	"image_filter_server/src/utils/initialisation"
 
-	"github.com/spf13/viper"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
 
 	env.LoadConfig("/Users/b0272559_1/Documents/ImageFilteringServer/")
-	// print all env variables using viper
 
-	fmt.Println(viper.GetString("LOG_LEVEL"))
+	// initialise modules
+	imageFilterController := initialisation.InitModules()
+
+	// create a new gin router
+	router := gin.Default()
+
+	// define routes
+	router.POST("/filter", imageFilterController.FilterImage)
+
 }

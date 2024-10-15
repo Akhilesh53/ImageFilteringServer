@@ -21,3 +21,13 @@ func GetImageHandlerService() *ImageHandlerService {
 	})
 	return imageHandlerService
 }
+
+// get image handler dao
+func (service *ImageHandlerService) GetImageHandlerDao() *daos.ImageHandlerDao {
+	return service.imageHandlerDao
+}
+
+// servuce func to check image url is already present or not
+func (service *ImageHandlerService) CheckImageURLPresent(imageURL string) (bool, error) {
+	return service.GetImageHandlerDao().CheckImageURLPresent(imageURL)
+}

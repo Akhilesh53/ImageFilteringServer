@@ -24,3 +24,8 @@ func GetImageHandlerDao() *ImageHandlerDao {
 	})
 	return imageHandlerDao
 }
+
+// func to check whether image url is present in the collection or not
+func (dao *ImageHandlerDao) CheckImageURLPresent(imageURL string) (bool,error) {
+	return false,nil
+}
