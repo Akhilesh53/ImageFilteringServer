@@ -2,7 +2,11 @@ package services
 
 import (
 	"image_filter_server/src/daos"
+	"image_filter_server/src/models"
 	"sync"
+
+	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 )
 
 var imageHandlerService *ImageHandlerService
@@ -28,6 +32,20 @@ func (service *ImageHandlerService) GetImageHandlerDao() *daos.ImageHandlerDao {
 }
 
 // servuce func to check image url is already present or not
-func (service *ImageHandlerService) CheckImageURLPresent(imageURL string) (bool, error) {
-	return service.GetImageHandlerDao().CheckImageURLPresent(imageURL)
+func (service *ImageHandlerService) IsImageURLPresent(ctx *gin.Context, imageURL string) (bool, error) {
+	return service.GetImageHandlerDao().IsImageURLPresent(ctx, imageURL)
+}
+
+// get image response from colllection
+func (service *ImageHandlerService) GetImageUrlResponse(ctx *gin.Context, imageURL string) (*models.FirebaseCollectionResult, error) {
+	resp, err := service.GetImageHandlerDao().GetImageUrlResponse(ctx, imageURL)
+
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	// todo:
+	// prepare the response struct and share it
+
+	return resp, nil
 }

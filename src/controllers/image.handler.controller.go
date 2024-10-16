@@ -1,7 +1,10 @@
 package controllers
 
 import (
+	apiErr "image_filter_server/pkg/errors"
 	"image_filter_server/src/services"
+	cloudvisionapi "image_filter_server/src/utils/cloud-vision-api"
+	"image_filter_server/src/utils/response"
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -21,6 +24,7 @@ func GetImageHandlerController() *ImageHandlerController {
 			imageHandlerService: services.GetImageHandlerService(),
 		}
 	})
+
 	return imageHandler
 }
 
@@ -29,35 +33,38 @@ func (controller *ImageHandlerController) GetImageHandlerService() *services.Ima
 	return controller.imageHandlerService
 }
 
-func (controller *ImageHandlerController) FilterImage(c *gin.Context) {
+func (controller *ImageHandlerController) FilterImage(ctx *gin.Context) {
 	// get the image url from the request query
-	imageURL := c.Query("url")
+	imageURL := ctx.Query("url")
 
 	var urlAlreadyPresent bool
 	var err error
 	// check if the image url is present in the collection
-	if urlAlreadyPresent, err = controller.GetImageHandlerService().CheckImageURLPresent(imageURL); err != nil {
-		c.JSON(500, gin.H{
-			"message": "Internal Server Error",
-		})
+	if urlAlreadyPresent, err = controller.GetImageHandlerService().IsImageURLPresent(ctx, imageURL); err != nil {
+		response.SendResponse(ctx, apiErr.InternalError.SetUUID(ctx.GetString("uuid")), apiErr.InternalError.SetUUID(ctx.GetString("uuid")), err)
 		return
 	}
 
 	if urlAlreadyPresent {
 		// get the output image url from the collection
-		// return the output image url
+		urlResponse, err := controller.GetImageHandlerService().GetImageUrlResponse(ctx, imageURL)
+		if err != nil {
+			response.SendResponse(ctx, apiErr.InternalError.SetUUID(ctx.GetString("uuid")), apiErr.InternalError.SetUUID(ctx.GetString("uuid")), err)
+			return
+		}
+		response.SendResponse(ctx, urlResponse, apiErr.InternalError.SetUUID(ctx.GetString("uuid")), nil)
+		return
 	}
 
 	// hit the google vision api to get the image labels
-	/*
-		result := map[string]interface{}{
-			"adult":     resp.Adult.String(),
-			"violence":  resp.Violence.String(),
-			"medical":   resp.Medical.String(),
-			"racy":      resp.Racy.String(),
-			"spoof":     resp.Spoof.String(),
-		}
-	*/
+	safeSearchResp, err := cloudvisionapi.AnalyseSafeSearchImage(ctx, imageURL)
+
+	if err != nil {
+		response.SendResponse(ctx, apiErr.InternalError.SetUUID(ctx.GetString("uuid")), apiErr.InternalError.SetUUID(ctx.GetString("uuid")), err)
+		return
+	}
+
+	response.SendResponse(ctx, safeSearchResp, nil, nil)
 
 	// if api doesnot extract anything , means len(result) == 0, image is safe
 	// else read triggering words from json :

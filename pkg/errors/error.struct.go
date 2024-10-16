@@ -36,3 +36,29 @@ func (e *Error) GetStatusCode() int {
 func (e *Error) GetUUID() string {
 	return e.UUID
 }
+
+// SetErrorCode is a function that sets the error code
+func (e *Error) SetErrorCode(errorCode string) *Error {
+	e.ErrorCode = errorCode
+	return e
+}
+
+// SetErrorMessage is a function that sets the error message
+func (e *Error) SetErrorMessage(errorMessage string) *Error {
+	e.ErrorMessage = errorMessage
+	return e
+}
+
+// SetStatusCode is a function that sets the status code
+func (e *Error) SetStatusCode(statusCode int) *Error {
+	e.StatusCode = statusCode
+	return e
+}
+
+// SetUUID is a function that sets the UUID
+func (e *Error) SetUUID(uuid string) *Error {
+	e.UUID = uuid
+	return e
+}
+
+

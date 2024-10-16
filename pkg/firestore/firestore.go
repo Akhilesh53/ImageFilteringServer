@@ -20,7 +20,7 @@ func InitialiaseFirestore() *firestore.Client {
 	ctx := context.Background()
 
 	firestoreOnce.Do(func() {
-		projectID := viper.GetString("PROJECT_ID")
+		projectID := viper.GetString("FIRESTORE_PROJECT_ID")
 		if projectID == "" {
 			logging.Error(&gin.Context{}, errors.ErrFirestoreProjectIDMissing.Error(), zap.Error(errors.ErrFirestoreProjectIDMissing))
 			panic(errors.ErrFirestoreProjectIDMissing)

@@ -1,6 +1,10 @@
 package env
 
-import "github.com/spf13/viper"
+import (
+	"os"
+
+	"github.com/spf13/viper"
+)
 
 // Load configuration from environment variables
 func LoadConfig(configPath string) {
@@ -16,8 +20,9 @@ func LoadConfig(configPath string) {
 
 	// Read the configuration file
 	viper.AutomaticEnv()
-	if err:= viper.ReadInConfig(); err != nil {
+	if err := viper.ReadInConfig(); err != nil {
 		panic(err)
 	}
-}
 
+	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", viper.GetString("GOOGLE_APPLICATION_CREDENTIALS"))
+}

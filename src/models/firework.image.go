@@ -8,7 +8,7 @@ Fields keys and values are:
 	String gemini1.5Flash8bFlashResult < string response here >
 	String conclusion < “open” or “block” >
 */
-type ImageCheck struct {
+type FirebaseCollectionResult struct {
 	ImageURL                   string                 `firestore:"image_url"`
 	GoogleVisionResult         map[string]interface{} `firestore:"googleVisionResult"`
 	Gemini15Flash8bFlashResult string                 `firestore:"gemini1.5Flash8bFlashResult"`
