@@ -43,9 +43,5 @@ func (service *ImageHandlerService) GetImageUrlResponse(ctx *gin.Context, imageU
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-
-	// todo:
-	// prepare the response struct and share it
-
 	return resp, nil
 }
