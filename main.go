@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	env "image_filter_server/config"
 	"image_filter_server/src/utils/initialisation"
 	"net/http"
 
@@ -11,11 +10,8 @@ import (
 )
 
 func main() {
-
-	env.LoadConfig("/Users/b0272559_1/Documents/ImageFilteringServer/")
-
 	// initialise modules
-	imageFilterController := initialisation.InitModules()
+	imageFilterController := initialisation.InitModules("/Users/akhileshmahajan/Documents/ImageFilteringServer")
 
 	// create a new gin router
 	router := gin.Default()

@@ -5,6 +5,7 @@ import (
 
 	firestoreDB "image_filter_server/pkg/firestore"
 	"image_filter_server/src/models"
+	"image_filter_server/src/utils"
 
 	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
@@ -35,18 +36,21 @@ func (dao *ImageHandlerDao) GetFirestoreClient() *firestore.Client {
 }
 
 // func to check whether image url is present in the collection or not
-func (dao *ImageHandlerDao) IsImageURLPresent(ctx *gin.Context, imageURL string) (bool, error) {
-	doc, err := dao.GetFirestoreClient().Collection(viper.GetString("FIRESTORE_COLLECTION_NAME")).Doc(imageURL).Get(ctx)
+func (dao *ImageHandlerDao) IsDocPresent(ctx *gin.Context, imageURL string) (bool, error) {
+	doc, err := dao.GetFirestoreClient().Collection(viper.GetString("FIRESTORE_COLLECTION_NAME")).Doc(utils.ModifyURL(imageURL)).Get(ctx)
 	if err != nil {
-		return false, errors.WithStack(errors.WithMessage(err, " error while fetching image url response from collection"))
+		if !doc.Exists() {
+			return false, nil
+		}
+		return false, errors.WithStack(errors.WithMessage(err, " : error while fetching image url response from collection"))
 	}
 
 	return doc.Exists(), nil
 }
 
 // func to get image response from collection
-func (dao *ImageHandlerDao) GetImageUrlResponse(ctx *gin.Context, imageURL string) (*models.FirebaseCollectionResult, error) {
-	doc, err := dao.GetFirestoreClient().Collection(viper.GetString("FIRESTORE_COLLECTION_NAME")).Doc(imageURL).Get(ctx)
+func (dao *ImageHandlerDao) GetDocResponse(ctx *gin.Context, imageURL string) (*models.FirebaseCollectionResult, error) {
+	doc, err := dao.GetFirestoreClient().Collection(viper.GetString("FIRESTORE_COLLECTION_NAME")).Doc(utils.ModifyURL(imageURL)).Get(ctx)
 	if err != nil {
 		return nil, errors.WithStack(errors.WithMessage(err, " error while fetching image url response from collection"))
 	}

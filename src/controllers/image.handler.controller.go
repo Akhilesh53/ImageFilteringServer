@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 )
 
 var imageHandler *ImageHandlerController
@@ -37,22 +38,27 @@ func (controller *ImageHandlerController) FilterImage(ctx *gin.Context) {
 	// get the image url from the request query
 	imageURL := ctx.Query("url")
 
-	var urlAlreadyPresent bool
-	var err error
-	// check if the image url is present in the collection
-	if urlAlreadyPresent, err = controller.GetImageHandlerService().IsImageURLPresent(ctx, imageURL); err != nil {
-		response.SendResponse(ctx, apiErr.InternalError.SetUUID(ctx.GetString("uuid")), apiErr.InternalError.SetUUID(ctx.GetString("uuid")), err)
+	if imageURL == "" {
+		response.SendResponse(ctx, nil, apiErr.URLNotPresent.SetUUID(ctx.GetString("uuid")), apiErr.ErrURLNotPresent)
 		return
 	}
 
-	if urlAlreadyPresent {
+	var docAlreadyPresent bool
+	var err error
+	// check if the image url is present in the collection
+	if docAlreadyPresent, err = controller.GetImageHandlerService().IsDocPresent(ctx, imageURL); err != nil {
+		response.SendResponse(ctx, apiErr.InternalError.SetUUID(ctx.GetString("uuid")), apiErr.InternalError.SetUUID(ctx.GetString("uuid")), errors.WithStack(err))
+		return
+	}
+
+	if docAlreadyPresent {
 		// get the output image url from the collection
-		urlResponse, err := controller.GetImageHandlerService().GetImageUrlResponse(ctx, imageURL)
+		urlResponse, err := controller.GetImageHandlerService().GetDocResponse(ctx, imageURL)
 		if err != nil {
-			response.SendResponse(ctx, apiErr.InternalError.SetUUID(ctx.GetString("uuid")), apiErr.InternalError.SetUUID(ctx.GetString("uuid")), err)
+			response.SendResponse(ctx, apiErr.InternalError.SetUUID(ctx.GetString("uuid")), apiErr.InternalError.SetUUID(ctx.GetString("uuid")), errors.WithStack(err))
 			return
 		}
-		response.SendResponse(ctx, urlResponse, apiErr.InternalError.SetUUID(ctx.GetString("uuid")), nil)
+		response.SendResponse(ctx, urlResponse, apiErr.RequestProcessSuccess.SetUUID(ctx.GetString("uuid")), nil)
 		return
 	}
 
@@ -60,21 +66,8 @@ func (controller *ImageHandlerController) FilterImage(ctx *gin.Context) {
 	safeSearchResp, err := cloudvisionapi.AnalyseSafeSearchImage(ctx, imageURL)
 
 	if err != nil {
-		response.SendResponse(ctx, apiErr.InternalError.SetUUID(ctx.GetString("uuid")), apiErr.InternalError.SetUUID(ctx.GetString("uuid")), err)
+		response.SendResponse(ctx, apiErr.InternalError.SetUUID(ctx.GetString("uuid")), apiErr.InternalError.SetUUID(ctx.GetString("uuid")), errors.WithStack(err))
 		return
 	}
-
-	response.SendResponse(ctx, safeSearchResp, nil, nil)
-
-	// if api doesnot extract anything , means len(result) == 0, image is safe
-	// else read triggering words from json :
-
-	/*
-		if result["adult"] == "LIKELY" || result["violence"] == "LIKELY" || result["racy"] == "LIKELY" ||
-			result["adult"] == "VERY_LIKELY" || result["violence"] == "VERY_LIKELY" || result["racy"] == "VERY_LIKELY" {
-			conclusion = "blocked"
-		}
-	*/
-
-	// store the result in file store
+	response.SendResponse(ctx, safeSearchResp, apiErr.RequestProcessSuccess.SetUUID(ctx.GetString("uuid")), nil)
 }

@@ -32,13 +32,13 @@ func (service *ImageHandlerService) GetImageHandlerDao() *daos.ImageHandlerDao {
 }
 
 // servuce func to check image url is already present or not
-func (service *ImageHandlerService) IsImageURLPresent(ctx *gin.Context, imageURL string) (bool, error) {
-	return service.GetImageHandlerDao().IsImageURLPresent(ctx, imageURL)
+func (service *ImageHandlerService) IsDocPresent(ctx *gin.Context, imageURL string) (bool, error) {
+	return service.GetImageHandlerDao().IsDocPresent(ctx, imageURL)
 }
 
 // get image response from colllection
-func (service *ImageHandlerService) GetImageUrlResponse(ctx *gin.Context, imageURL string) (*models.FirebaseCollectionResult, error) {
-	resp, err := service.GetImageHandlerDao().GetImageUrlResponse(ctx, imageURL)
+func (service *ImageHandlerService) GetDocResponse(ctx *gin.Context, imageURL string) (*models.FirebaseCollectionResult, error) {
+	resp, err := service.GetImageHandlerDao().GetDocResponse(ctx, imageURL)
 
 	if err != nil {
 		return nil, errors.WithStack(err)
