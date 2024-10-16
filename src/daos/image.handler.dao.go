@@ -66,3 +66,12 @@ func (dao *ImageHandlerDao) GetDocResponse(ctx *gin.Context, imageURL string) (*
 
 	return nil, errors.WithStack(errors.New("image url not found in collection"))
 }
+
+// func to save image response to collection
+func (dao *ImageHandlerDao) SaveDocResponse(ctx *gin.Context, imageURL string, response *models.FirebaseCollectionResult) error {
+	_, err := dao.GetFirestoreClient().Collection(viper.GetString("FIRESTORE_COLLECTION_NAME")).Doc(utils.ModifyURL(imageURL)).Set(ctx, response)
+	if err != nil {
+		return errors.WithStack(errors.WithMessage(err, " error while saving image response to collection"))
+	}
+	return nil
+}

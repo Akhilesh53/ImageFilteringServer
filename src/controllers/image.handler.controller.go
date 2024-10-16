@@ -2,6 +2,7 @@ package controllers
 
 import (
 	apiErr "image_filter_server/pkg/errors"
+	"image_filter_server/src/models"
 	"image_filter_server/src/services"
 	cloudvisionapi "image_filter_server/src/utils/cloud-vision-api"
 	"image_filter_server/src/utils/response"
@@ -69,5 +70,14 @@ func (controller *ImageHandlerController) FilterImage(ctx *gin.Context) {
 		response.SendResponse(ctx, apiErr.InternalError.SetUUID(ctx.GetString("uuid")), apiErr.InternalError.SetUUID(ctx.GetString("uuid")), errors.WithStack(err))
 		return
 	}
+
+	// store the image response in the collection
+	err = controller.GetImageHandlerService().SaveDocResponse(ctx, imageURL, models.NewDefaultFirebaseCollectionResult().SetConclusion("safe").SetImageURL(imageURL).SetGoogleVisionResult(safeSearchResp))
+
+	if err != nil {
+		response.SendResponse(ctx, nil, apiErr.InternalError.SetUUID(ctx.GetString("uuid")), errors.WithStack(err))
+		return
+	}
+
 	response.SendResponse(ctx, safeSearchResp, apiErr.RequestProcessSuccess.SetUUID(ctx.GetString("uuid")), nil)
 }

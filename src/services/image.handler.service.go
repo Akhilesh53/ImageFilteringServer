@@ -45,3 +45,8 @@ func (service *ImageHandlerService) GetDocResponse(ctx *gin.Context, imageURL st
 	}
 	return resp, nil
 }
+
+// service func to save image response to collection
+func (service *ImageHandlerService) SaveDocResponse(ctx *gin.Context, imageURL string, response *models.FirebaseCollectionResult) error {
+	return service.GetImageHandlerDao().SaveDocResponse(ctx, imageURL, response)
+}
