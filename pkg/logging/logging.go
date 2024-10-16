@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -25,23 +26,32 @@ var (
 
 func InitialiseLogger() *zap.Logger {
 	loggerOnce.Do(func() {
+
+		if _, err := os.Stat(logFileDir); os.IsNotExist(err) {
+			err := os.MkdirAll(logFileDir, os.ModePerm)
+			if err != nil {
+				panic(fmt.Sprintf("Failed to create log directory: %v", err))
+			}
+		}
+
 		var (
-			level       = getLevel(viper.GetString("LOG_LEVEL"))
-			devConfig   = zap.NewDevelopmentEncoderConfig()
-			prodConfig  = zap.NewProductionEncoderConfig()
-			hostname, _ = os.Hostname()
+			level      = getLevel(viper.GetString("LOG_LEVEL"))
+			devConfig  = zap.NewDevelopmentEncoderConfig()
+			prodConfig = zap.NewProductionEncoderConfig()
+			filename   = strings.ToLower(viper.GetString("PROCESS_NAME")) + ".log"
 		)
+
+		fmt.Println(filename)
+		if filename == "" {
+			filename = "image_filter_server.log"
+		}
 
 		devConfig.EncodeTime = zapcore.RFC3339NanoTimeEncoder
 		prodConfig.EncodeTime = zapcore.RFC3339NanoTimeEncoder
 
-		if hostname != "" {
-			hostname = "_" + hostname
-		}
-
 		filewriter := zapcore.AddSync(&FlushingLumberjackLogger{
 			Logger: &lumberjack.Logger{
-				Filename:   logFileDir + strings.ToLower(viper.GetString("PROCESS_NAME")) + ".log",
+				Filename:   logFileDir + filename,
 				MaxSize:    maxLogFileSize, // MB
 				MaxAge:     maxLogFileAge,  // Days
 				MaxBackups: maxLogFiles,    // No of files

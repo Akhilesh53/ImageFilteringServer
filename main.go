@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"image_filter_server/pkg/logging"
 	"image_filter_server/src/utils/initialisation"
 	"net/http"
 
@@ -10,12 +10,18 @@ import (
 )
 
 func main() {
-	// initialise modules
-	imageFilterController := initialisation.InitModules("/Users/akhileshmahajan/Documents/ImageFilteringServer")
 
 	// create a new gin router
-	router := gin.Default()
+	gin.SetMode(gin.ReleaseMode)
+	gin.DisableConsoleColor()
 
+	router := gin.New()
+	router.RedirectFixedPath = true
+	router.RedirectTrailingSlash = true
+
+	// initialise modules
+	imageFilterController := initialisation.InitModules("/Users/akhileshmahajan/Documents/ImageFilteringServer")
+	
 	// define routes
 	router.POST("/filter", imageFilterController.FilterImage)
 
@@ -25,7 +31,7 @@ func main() {
 		Handler: router,
 	}
 
-	fmt.Println("Starting server on port: " + viper.GetString("PORT"))
+	logging.Info(&gin.Context{}, "Server is running on port "+viper.GetString("PORT"))
 
 	if err := server.ListenAndServe(); err != nil {
 		panic(err)
