@@ -16,7 +16,7 @@ func SendResponse(ctx *gin.Context, payload interface{}, Err *apiErr.Error, err 
 	if Err != nil {
 		logging.Info(ctx, Err.ErrorMessage)
 	}
-	if err == nil {
+	if err != nil {
 		logging.Error(ctx, "error : ", zap.Error(err))
 	}
 
