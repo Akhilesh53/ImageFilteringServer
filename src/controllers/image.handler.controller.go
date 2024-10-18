@@ -48,6 +48,7 @@ func (controller *ImageHandlerController) FilterImage(ctx *gin.Context) {
 	var docAlreadyPresent bool
 	var err error
 	var imageFilterApiResponse = dtos.GetDefaultImageFilterAPIResponse()
+	var resultString = "image is whitelisted"
 
 	// check if the image url is present in the collection
 	if docAlreadyPresent, err = controller.GetImageHandlerService().IsDocPresent(ctx, imageURL); err != nil {
@@ -75,12 +76,8 @@ func (controller *ImageHandlerController) FilterImage(ctx *gin.Context) {
 		return
 	}
 
-	resultString := "image is whitelisted"
-
-	//todo:
-	// check for trigger words in response
-	// if there is a trigger word, then send response as "image is bad"
-	// else send response as "image is white-listed"
+	// check if the image is blacklisted
+	CheckSafeSearch(googleVisionAPIResp, &resultString)
 
 	imageFilterApiResponse.SetResult(resultString)
 
@@ -93,4 +90,22 @@ func (controller *ImageHandlerController) FilterImage(ctx *gin.Context) {
 	}
 
 	response.SendResponse(ctx, imageFilterApiResponse, apiErr.RequestProcessSuccess.SetUUID(ctx.GetString("uuid")), nil)
+}
+
+func CheckSafeSearch(googleVisionAPIResp *models.GCPResponse, resultString *string) {
+	*resultString = "image is whitelisted"
+	if googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation() != nil {
+		// if adult == LIKELY, set string to "image is blacklisted"
+		if googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetAdult().String() == "LIKELY" || googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetAdult().String() == "VERY_LIKELY" || googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetAdult().String() == "POSSIBLE" {
+			*resultString = "image is blacklisted"
+		} else if googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetSpoof().String() == "LIKELY" || googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetSpoof().String() == "VERY_LIKELY" || googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetSpoof().String() == "POSSIBLE" {
+			*resultString = "image is blacklisted"
+		} else if googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetMedical().String() == "LIKELY" || googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetMedical().String() == "VERY_LIKELY" || googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetMedical().String() == "POSSIBLE" {
+			*resultString = "image is blacklisted"
+		} else if googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetViolence().String() == "LIKELY" || googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetViolence().String() == "VERY_LIKELY" || googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetViolence().String() == "POSSIBLE" {
+			*resultString = "image is blacklisted"
+		} else if googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetRacy().String() == "LIKELY" || googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetRacy().String() == "VERY_LIKELY" || googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetRacy().String() == "POSSIBLE" {
+			*resultString = "image is blacklisted"
+		}
+	}
 }
