@@ -1,15 +1,17 @@
 package cloudvisionapi
 
 import (
+	"image_filter_server/constants"
 	"image_filter_server/src/models"
 	"os"
 
 	vision "cloud.google.com/go/vision/apiv1"
+	"cloud.google.com/go/vision/v2/apiv1/visionpb"
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 )
 
-func AnalyseSafeSearchImage(ctx *gin.Context, imagePath string) (*models.GCPSafeSearch, error) {
+func AnalyseSafeSearchImage(ctx *gin.Context, imagePath string) (*models.GCPResponse, error) {
 
 	// create a new client
 	client, err := vision.NewImageAnnotatorClient(ctx)
@@ -30,14 +32,19 @@ func AnalyseSafeSearchImage(ctx *gin.Context, imagePath string) (*models.GCPSafe
 		return nil, errors.WithStack(err)
 	}
 
-	// detect safe search properties
-	props, err := client.DetectSafeSearch(ctx, image, nil)
+	resp, err := client.AnnotateImage(ctx, &visionpb.AnnotateImageRequest{
+		Image:    image,
+		Features: constants.FeatureList,
+	})
+
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
+	if resp.Error != nil {
+		return nil, errors.New(resp.Error.Message)
+	}
 	// prepare the response
-	gcpSafeSearchResponse := models.DefaultGCPSafeSearch().SetAdult(props.GetAdult().String()).SetMedical(props.GetMedical().String()).SetSpoof(props.GetSpoof().String()).SetViolence(props.GetViolence().String()).SetRacy(props.GetRacy().String())
-
+	gcpSafeSearchResponse := models.DefaultGCPSafeSearch().SetResponse(resp)
 	return gcpSafeSearchResponse, nil
 }

@@ -12,11 +12,14 @@ import (
 func SendResponse(ctx *gin.Context, payload interface{}, Err *apiErr.Error, err error) {
 	if payload == nil {
 		payload = Err
-		logging.Error(ctx, Err.ErrorMessage, zap.Error(err))
 	}
-	if err == nil {
+	if Err != nil {
 		logging.Info(ctx, Err.ErrorMessage)
 	}
+	if err == nil {
+		logging.Error(ctx, "error : ", zap.Error(err))
+	}
+
 	logging.Info(ctx, "Response", zap.Any("data", payload))
 	ctx.Writer.Write(utils.InterfaceToBytes(ctx, payload))
 	ctx.AbortWithStatus(Err.StatusCode)

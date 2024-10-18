@@ -9,14 +9,14 @@ Fields keys and values are:
 	String conclusion < “open” or “block” >
 */
 type FirebaseCollectionResult struct {
-	ImageURL                   string         `firestore:"image_url"`
-	GoogleVisionResult         *GCPSafeSearch `firestore:"googleVisionResult"`
-	Gemini15Flash8bFlashResult string         `firestore:"gemini1.5Flash8bFlashResult"`
-	Conclusion                 string         `firestore:"conclusion"`
+	ImageURL                   string       `firestore:"image_url"`
+	GoogleVisionResult         *GCPResponse `firestore:"googleVisionResult"`
+	Gemini15Flash8bFlashResult string       `firestore:"gemini1.5Flash8bFlashResult"`
+	Conclusion                 string       `firestore:"conclusion"`
 }
 
 // func to create a new instance of FirebaseCollectionResult
-func NewFirebaseCollectionResult(imageURL string, googleVisionResult *GCPSafeSearch, gemini15Flash8bFlashResult string, conclusion string) *FirebaseCollectionResult {
+func NewFirebaseCollectionResult(imageURL string, googleVisionResult *GCPResponse, gemini15Flash8bFlashResult string, conclusion string) *FirebaseCollectionResult {
 	return &FirebaseCollectionResult{
 		ImageURL:                   imageURL,
 		GoogleVisionResult:         googleVisionResult,
@@ -42,13 +42,13 @@ func (f *FirebaseCollectionResult) GetImageURL() string {
 }
 
 // func to set the google vision result
-func (f *FirebaseCollectionResult) SetGoogleVisionResult(googleVisionResult *GCPSafeSearch) *FirebaseCollectionResult {
+func (f *FirebaseCollectionResult) SetGoogleVisionResult(googleVisionResult *GCPResponse) *FirebaseCollectionResult {
 	f.GoogleVisionResult = googleVisionResult
 	return f
 }
 
 // func to get the google vision result
-func (f *FirebaseCollectionResult) GetGoogleVisionResult() *GCPSafeSearch {
+func (f *FirebaseCollectionResult) GetGoogleVisionResult() *GCPResponse {
 	return f.GoogleVisionResult
 }
 
