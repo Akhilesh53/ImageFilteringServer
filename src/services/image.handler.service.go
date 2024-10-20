@@ -50,3 +50,8 @@ func (service *ImageHandlerService) GetDocResponse(ctx *gin.Context, imageURL st
 func (service *ImageHandlerService) SaveDocResponse(ctx *gin.Context, imageURL string, response *models.FirebaseCollectionResult) error {
 	return service.GetImageHandlerDao().SaveDocResponse(ctx, imageURL, response)
 }
+
+// is blocked words presemt in the response
+func (service *ImageHandlerService) IsBlockedWordsPresent(ctx *gin.Context, responseFetchedWords []string) bool {
+	return service.GetImageHandlerDao().IsBlockedWordsPresent(ctx, responseFetchedWords)
+}

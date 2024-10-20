@@ -1,8 +1,10 @@
 package daos
 
 import (
+	"strings"
 	"sync"
 
+	"image_filter_server/constants"
 	firestoreDB "image_filter_server/pkg/firestore"
 	"image_filter_server/src/models"
 	"image_filter_server/src/utils"
@@ -74,4 +76,16 @@ func (dao *ImageHandlerDao) SaveDocResponse(ctx *gin.Context, imageURL string, r
 		return errors.WithStack(errors.WithMessage(err, " error while saving image response to collection"))
 	}
 	return nil
+}
+
+// func to check whether blocked words are present in the response
+func (dao *ImageHandlerDao) IsBlockedWordsPresent(ctx *gin.Context, responseFetchedWords []string) bool {
+	for word, _ := range constants.BlockedWordsMap {
+		for _, fetchedWord := range responseFetchedWords {
+			if strings.Contains(fetchedWord, word) {
+				return true
+			}
+		}
+	}
+	return false
 }
