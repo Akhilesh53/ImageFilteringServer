@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 
+	"cloud.google.com/go/vision/v2/apiv1/visionpb"
+
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 )
@@ -95,88 +97,53 @@ func (controller *ImageHandlerController) FilterImage(ctx *gin.Context) {
 	response.SendResponse(ctx, imageFilterApiResponse, apiErr.RequestProcessSuccess.SetUUID(ctx.GetString("uuid")), nil)
 }
 
+// Main function to collect words from Google Vision API response
 func collectWordsFromResponse(googleVisionAPIResp *models.GCPResponse) []string {
-
 	var wg sync.WaitGroup
+	wordsChan := make(chan []string, 9)
+	words := []string{}
 
-	var (
-		wordsChan = make(chan []string, 9)
-		words     = []string{}
-	)
+	// Collect words in parallel from different annotations
+	annotationFuncs := []func(*models.GCPResponse, chan []string){
+		getFaceAnnotationsWords,
+		landmarkAnnotationsWords,
+		logoAnnotationsWords,
+		labelAnnotationsWords,
+		localizedObjectAnnotationsWords,
+		textAnnotationsWords,
+		fullTextAnnotationsWords,
+		safeSearchAnnotationsWords,
+		productSearchAnnotationsWords,
+	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		getFaceAnnotationsWords(googleVisionAPIResp, wordsChan)
-	}()
+	for _, annotationFunc := range annotationFuncs {
+		wg.Add(1)
+		go func(annotateFunc func(*models.GCPResponse, chan []string)) {
+			defer wg.Done()
+			annotateFunc(googleVisionAPIResp, wordsChan)
+		}(annotationFunc)
+	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		landmarkAnnotationsWords(googleVisionAPIResp, wordsChan)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		logoAnnotationsWords(googleVisionAPIResp, wordsChan)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		labelAnnotationsWords(googleVisionAPIResp, wordsChan)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		localizedObjectAnnotationsWords(googleVisionAPIResp, wordsChan)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		textAnnotationsWords(googleVisionAPIResp, wordsChan)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		fullTextAnnotationsWords(googleVisionAPIResp, wordsChan)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		safeSearchAnnotationsWords(googleVisionAPIResp, wordsChan)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		productSearchAnnotationsWords(googleVisionAPIResp, wordsChan)
-	}()
-
+	// Wait for all routines to complete
 	wg.Wait()
 	close(wordsChan)
 
+	// Collect all words from channels
 	for wordArr := range wordsChan {
 		if len(wordArr) > 0 {
 			words = append(words, wordArr...)
 		}
 	}
+
 	return words
 }
 
+// Face Annotations
 func getFaceAnnotationsWords(googleVisionAPIResp *models.GCPResponse, wordsChan chan []string) {
 	var words []string
-	// face annotations
-	if googleVisionAPIResp.GetResponse().GetFaceAnnotations() != nil {
-		for _, faceAnnotation := range googleVisionAPIResp.GetResponse().GetFaceAnnotations() {
-			if faceAnnotation.GetAngerLikelihood().String() == "LIKELY" ||
-				faceAnnotation.GetAngerLikelihood().String() == "VERY_LIKELY" ||
-				faceAnnotation.GetAngerLikelihood().String() == "POSSIBLE" {
+	if annotations := googleVisionAPIResp.GetResponse().GetFaceAnnotations(); annotations != nil {
+		for _, faceAnnotation := range annotations {
+			if isAngerLikely(faceAnnotation.GetAngerLikelihood().String()) {
 				words = append(words, "anger")
 			}
 		}
@@ -184,163 +151,142 @@ func getFaceAnnotationsWords(googleVisionAPIResp *models.GCPResponse, wordsChan 
 	wordsChan <- words
 }
 
-// land mark annotations
+func isAngerLikely(likelihood string) bool {
+	return likelihood == "LIKELY" || likelihood == "VERY_LIKELY" || likelihood == "POSSIBLE"
+}
+
+// Landmark Annotations
 func landmarkAnnotationsWords(googleVisionAPIResp *models.GCPResponse, wordsChan chan []string) {
 	var words []string
-	// landmark annotations
-	if googleVisionAPIResp.GetResponse().GetLandmarkAnnotations() != nil {
-		for _, landmarkAnnotation := range googleVisionAPIResp.GetResponse().GetLandmarkAnnotations() {
-			words = append(words, strings.ToLower(landmarkAnnotation.GetDescription()))
-
-			// todo: check whhether to consider name or values in properties
-			// properties
-			if landmarkAnnotation.GetProperties() != nil {
-				for _, property := range landmarkAnnotation.GetProperties() {
-					words = append(words, strings.ToLower(property.GetName()))
-				}
-			}
+	if annotations := googleVisionAPIResp.GetResponse().GetLandmarkAnnotations(); annotations != nil {
+		for _, landmark := range annotations {
+			words = append(words, strings.ToLower(landmark.GetDescription()))
+			words = append(words, collectProperties(landmark.GetProperties())...)
 		}
 	}
 	wordsChan <- words
 }
 
-// logo annotations
+// Logo Annotations
 func logoAnnotationsWords(googleVisionAPIResp *models.GCPResponse, wordsChan chan []string) {
 	var words []string
-	// logo annotations
-	if googleVisionAPIResp.GetResponse().GetLogoAnnotations() != nil {
-		for _, logoAnnotation := range googleVisionAPIResp.GetResponse().GetLogoAnnotations() {
-			words = append(words, strings.ToLower(logoAnnotation.GetDescription()))
-
-			// properties
-			if logoAnnotation.GetProperties() != nil {
-				for _, property := range logoAnnotation.GetProperties() {
-					words = append(words, strings.ToLower(property.GetName()))
-				}
-			}
+	if annotations := googleVisionAPIResp.GetResponse().GetLogoAnnotations(); annotations != nil {
+		for _, logo := range annotations {
+			words = append(words, strings.ToLower(logo.GetDescription()))
+			words = append(words, collectProperties(logo.GetProperties())...)
 		}
 	}
 	wordsChan <- words
 }
 
-// label
+// Label Annotations
 func labelAnnotationsWords(googleVisionAPIResp *models.GCPResponse, wordsChan chan []string) {
 	var words []string
-	// label annotations
-	if googleVisionAPIResp.GetResponse().GetLabelAnnotations() != nil {
-		for _, labelAnnotation := range googleVisionAPIResp.GetResponse().GetLabelAnnotations() {
-			words = append(words, strings.ToLower(labelAnnotation.GetDescription()))
-
-			// properties
-			if labelAnnotation.GetProperties() != nil {
-				for _, property := range labelAnnotation.GetProperties() {
-					words = append(words, strings.ToLower(property.GetName()))
-				}
-			}
+	if annotations := googleVisionAPIResp.GetResponse().GetLabelAnnotations(); annotations != nil {
+		for _, label := range annotations {
+			words = append(words, strings.ToLower(label.GetDescription()))
+			words = append(words, collectProperties(label.GetProperties())...)
 		}
 	}
 	wordsChan <- words
 }
 
-// localised object annotations
+// Localized Object Annotations
 func localizedObjectAnnotationsWords(googleVisionAPIResp *models.GCPResponse, wordsChan chan []string) {
 	var words []string
-	// localized object annotations
-	if googleVisionAPIResp.GetResponse().GetLocalizedObjectAnnotations() != nil {
-		for _, localizedObjectAnnotation := range googleVisionAPIResp.GetResponse().GetLocalizedObjectAnnotations() {
-			words = append(words, strings.ToLower(localizedObjectAnnotation.GetName()))
+	if annotations := googleVisionAPIResp.GetResponse().GetLocalizedObjectAnnotations(); annotations != nil {
+		for _, obj := range annotations {
+			words = append(words, strings.ToLower(obj.GetName()))
 		}
 	}
 	wordsChan <- words
 }
 
-// text annotations
+// Text Annotations
 func textAnnotationsWords(googleVisionAPIResp *models.GCPResponse, wordsChan chan []string) {
 	var words []string
-	// text annotations
-	if googleVisionAPIResp.GetResponse().GetTextAnnotations() != nil {
-		for _, textAnnotation := range googleVisionAPIResp.GetResponse().GetTextAnnotations() {
-			words = append(words, strings.ToLower(textAnnotation.GetDescription()))
-
-			// properties
-			if textAnnotation.GetProperties() != nil {
-				for _, property := range textAnnotation.GetProperties() {
-					words = append(words, strings.ToLower(property.GetName()))
-				}
-			}
+	if annotations := googleVisionAPIResp.GetResponse().GetTextAnnotations(); annotations != nil {
+		for _, text := range annotations {
+			words = append(words, strings.ToLower(text.GetDescription()))
+			words = append(words, collectProperties(text.GetProperties())...)
 		}
 	}
 	wordsChan <- words
 }
 
-// full text annotations
+// Full Text Annotations
 func fullTextAnnotationsWords(googleVisionAPIResp *models.GCPResponse, wordsChan chan []string) {
 	var words []string
-	// full text annotations
-	if googleVisionAPIResp.GetResponse().GetFullTextAnnotation() != nil {
-		words = append(words, strings.ToLower(googleVisionAPIResp.GetResponse().GetFullTextAnnotation().GetText()))
+	if fullText := googleVisionAPIResp.GetResponse().GetFullTextAnnotation(); fullText != nil {
+		words = append(words, strings.ToLower(fullText.GetText()))
 	}
 	wordsChan <- words
 }
 
-// safe search annotations
+// Safe Search Annotations
 func safeSearchAnnotationsWords(googleVisionAPIResp *models.GCPResponse, wordsChan chan []string) {
 	var words []string
-	// safe search annotations
-	if googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation() != nil {
-		if googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetAdult().String() == "LIKELY" ||
-			googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetAdult().String() == "VERY_LIKELY" ||
-			googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetAdult().String() == "POSSIBLE" {
-			words = append(words, "adult")
-		}
-
-		if googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetSpoof().String() == "LIKELY" ||
-			googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetSpoof().String() == "VERY_LIKELY" ||
-			googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetSpoof().String() == "POSSIBLE" {
-			words = append(words, "spoof")
-		}
-
-		if googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetMedical().String() == "LIKELY" ||
-			googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetMedical().String() == "VERY_LIKELY" ||
-			googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetMedical().String() == "POSSIBLE" {
-			words = append(words, "medical")
-		}
-
-		if googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetViolence().String() == "LIKELY" ||
-			googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetViolence().String() == "VERY_LIKELY" ||
-			googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetViolence().String() == "POSSIBLE" {
-			words = append(words, "violence")
-		}
-
-		if googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetRacy().String() == "LIKELY" ||
-			googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetRacy().String() == "VERY_LIKELY" ||
-			googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation().GetRacy().String() == "POSSIBLE" {
-			words = append(words, "racy")
-		}
+	if safeSearch := googleVisionAPIResp.GetResponse().GetSafeSearchAnnotation(); safeSearch != nil {
+		words = append(words, safeSearchChecks(safeSearch)...)
 	}
 	wordsChan <- words
 }
 
-// product search annotations
+func safeSearchChecks(safeSearch *visionpb.SafeSearchAnnotation) []string {
+	var words []string
+	if isLikely(safeSearch.GetAdult()) {
+		words = append(words, "adult")
+	}
+	if isLikely(safeSearch.GetSpoof()) {
+		words = append(words, "spoof")
+	}
+	if isLikely(safeSearch.GetMedical()) {
+		words = append(words, "medical")
+	}
+	if isLikely(safeSearch.GetViolence()) {
+		words = append(words, "violence")
+	}
+	if isLikely(safeSearch.GetRacy()) {
+		words = append(words, "racy")
+	}
+	return words
+}
+
+func isLikely(likelihood visionpb.Likelihood) bool {
+	return likelihood.String() == "LIKELY" || likelihood.String() == "VERY_LIKELY" || likelihood.String() == "POSSIBLE"
+}
+
+// Product Search Annotations
 func productSearchAnnotationsWords(googleVisionAPIResp *models.GCPResponse, wordsChan chan []string) {
 	var words []string
-	// product search annotations
-	if googleVisionAPIResp.GetResponse().GetProductSearchResults() != nil {
-		// product read results: grouped
-		if googleVisionAPIResp.GetResponse().GetProductSearchResults().GetProductGroupedResults() != nil {
-			for _, productGroupedResult := range googleVisionAPIResp.GetResponse().GetProductSearchResults().GetProductGroupedResults() {
-				for _, productResult := range productGroupedResult.GetResults() {
-					words = append(words, strings.ToLower(productResult.GetProduct().GetDisplayName()))
-				}
-			}
-		}
+	if productSearch := googleVisionAPIResp.GetResponse().GetProductSearchResults(); productSearch != nil {
+		words = append(words, collectProductSearchWords(productSearch)...)
+	}
+	wordsChan <- words
+}
 
-		// product read results: object
-		if googleVisionAPIResp.GetResponse().GetProductSearchResults().GetResults() != nil {
-			for _, productResult := range googleVisionAPIResp.GetResponse().GetProductSearchResults().GetResults() {
-				words = append(words, strings.ToLower(productResult.GetProduct().GetDisplayName()))
+func collectProductSearchWords(productSearch *visionpb.ProductSearchResults) []string {
+	var words []string
+	if groupedResults := productSearch.GetProductGroupedResults(); groupedResults != nil {
+		for _, group := range groupedResults {
+			for _, result := range group.GetResults() {
+				words = append(words, strings.ToLower(result.GetProduct().GetDisplayName()))
 			}
 		}
 	}
-	wordsChan <- words
+	if results := productSearch.GetResults(); results != nil {
+		for _, result := range results {
+			words = append(words, strings.ToLower(result.GetProduct().GetDisplayName()))
+		}
+	}
+	return words
+}
+
+// Helper function to collect properties from annotation
+func collectProperties(properties []*visionpb.Property) []string {
+	var words []string
+	for _, property := range properties {
+		words = append(words, strings.ToLower(property.GetName()))
+	}
+	return words
 }
