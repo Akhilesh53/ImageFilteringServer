@@ -3,7 +3,7 @@ Image Filter API:
 
 Changes to be done:
 
-1. Create .env file with name imagefilter.env and put variable names inside it
+1. Create .env file with name imagefilter.env and add below variable names in it
 
 ```
 
