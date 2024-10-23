@@ -1,1 +1,1 @@
-echo ${GCP_CREDENTIALS} > /app/gcp-config.json
+echo ${GCP_CREDENTIALS} > ./gcp-config.json
