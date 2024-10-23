@@ -20,7 +20,7 @@ func main() {
 	router.RedirectTrailingSlash = true
 
 	// initialise modules
-	imageFilterController := initialisation.InitModules("/Users/akhileshmahajan/Documents/ImageFilteringServer")
+	imageFilterController := initialisation.InitModules()
 	
 	// define routes
 	router.POST("/filter", imageFilterController.FilterImage)

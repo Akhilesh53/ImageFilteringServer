@@ -6,6 +6,7 @@ var (
 	ErrFirestoreConnectionFailed = errors.New("failed to connect to the firestore database")
 	ErrFirestoreProjectIDMissing = errors.New("firestore project id is missing")
 	ErrURLNotPresent             = errors.New("URL not present in request")
+	ErrEnvFilePathNotFound       = errors.New("environment file path not found")
 )
 
 var (
