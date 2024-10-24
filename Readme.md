@@ -1,22 +1,44 @@
 Image Filter API:
 ----
 
-Changes to be done:
+**Read the below instructions the deploy the application on heroku:**
 
-1. Create .env file with name imagefilter.env and add below variable names in it
+1. Download and install the gcp config file named *imagefilterapi-config.json* with in the root directory.
+
+2. Setup config in heroku env varibles. Run below commands.
+
+   ```
+
+    heroku config:set GCP_CREDENTIALS="$(< ./imagefilterapi-config.json)" --app image-filtering-for-browser
+
+    heroku config:set GOOGLE_APPLICATION_CREDENTIALS=gcp-config.json --app image-filtering-for-browser
+
+   ```
+
+3. Build the go code
+
+    ```
+    GOOS=linux GOARCH=amd64 go build -o ./build/image-filtering-for-browser
+    ```
+
+4. Deploy the code on heroku for master branch
+
+5. To check the logs
+
+    ```
+    heroku logs --tail --app image-filtering-for-browser
+    ```
+
+----
+
+Sample Curl:
+
+----
 
 ```
 
-PROCESS_NAME = image_filter_server
-LOG_LEVEL = info
-ENVIRONMENT = dev
-PORT = 8080
-FIRESTORE_COLLECTION_NAME = <Collection Name>
-FIRESTORE_PROJECT_ID = <Project Id>
-GOOGLE_APPLICATION_CREDENTIALS= <Path to GCP Key Json File>
+curl -X POST https://image-filtering-for-browser-daf2c3a53445.herokuapp.com/verify_image \
+-H "Content-Type: application/json" \
+-d '{"image_url": "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0"}'
 
 ```
-
-2. Download GCP Key Config Json from GCP console and rename it to `imagefilterapi-config.json`
-
-3. In main.go , while initialising the module, change the input parameter to <Path to .env file>
