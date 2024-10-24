@@ -21,9 +21,9 @@ func main() {
 
 	// initialise modules
 	imageFilterController := initialisation.InitModules()
-	
+
 	// define routes
-	router.POST("/filter", imageFilterController.FilterImage)
+	router.POST("/verify_image", imageFilterController.VerifyImage)
 
 	// run the server by printing
 	server := &http.Server{

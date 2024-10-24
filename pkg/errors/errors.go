@@ -27,4 +27,10 @@ var (
 		ErrorMessage: "URL not present",
 		StatusCode:   400,
 	}
+
+	InvalidRequest = Error{
+		ErrorCode:    "API-003-E",
+		ErrorMessage: "Invalid request",
+		StatusCode:   400,
+	}
 )

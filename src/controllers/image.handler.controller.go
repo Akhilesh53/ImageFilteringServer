@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"fmt"
 	apiErr "image_filter_server/pkg/errors"
+	"image_filter_server/pkg/logging"
 	"image_filter_server/src/dtos"
 	"image_filter_server/src/models"
 	"image_filter_server/src/services"
@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"cloud.google.com/go/vision/v2/apiv1/visionpb"
+	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
@@ -40,9 +41,18 @@ func (controller *ImageHandlerController) GetImageHandlerService() *services.Ima
 	return controller.imageHandlerService
 }
 
-func (controller *ImageHandlerController) FilterImage(ctx *gin.Context) {
+func (controller *ImageHandlerController) VerifyImage(ctx *gin.Context) {
+
+	// bind the json request to the struct
+	var request dtos.ImageFilterAPIRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		response.SendResponse(ctx, nil, apiErr.InvalidRequest.SetUUID(ctx.GetString("uuid")), errors.WithStack(err))
+		return
+	}
+
 	// get the image url from the request query
-	imageURL := ctx.Query("url")
+	imageURL := request.GetImageUrl()
+	logging.Info(ctx, "image url received : ", zap.String("image url : ", imageURL))
 
 	if imageURL == "" {
 		response.SendResponse(ctx, nil, apiErr.URLNotPresent.SetUUID(ctx.GetString("uuid")), apiErr.ErrURLNotPresent)
@@ -67,7 +77,7 @@ func (controller *ImageHandlerController) FilterImage(ctx *gin.Context) {
 			response.SendResponse(ctx, apiErr.InternalError.SetUUID(ctx.GetString("uuid")), apiErr.InternalError.SetUUID(ctx.GetString("uuid")), errors.WithStack(err))
 			return
 		}
-		fmt.Println("image url already present in the collection")
+		logging.Debug(ctx, "doc response already present ", zap.String(" url : ", docResp.GetImageURL()))
 		imageFilterApiResponse.SetResult(docResp.GetConclusion())
 		response.SendResponse(ctx, imageFilterApiResponse, apiErr.RequestProcessSuccess.SetUUID(ctx.GetString("uuid")), nil)
 		return
@@ -81,7 +91,9 @@ func (controller *ImageHandlerController) FilterImage(ctx *gin.Context) {
 		return
 	}
 
-	if blockedWordsPresent := controller.GetImageHandlerService().IsBlockedWordsPresent(ctx, collectWordsFromResponse(googleVisionAPIResp)); blockedWordsPresent {
+	blockedWords := collectWordsFromResponse(googleVisionAPIResp)
+	if blockedWordsPresent := controller.GetImageHandlerService().IsBlockedWordsPresent(ctx, blockedWords); blockedWordsPresent {
+		logging.Debug(ctx, " blocked words : ", zap.Strings(" blocked words : ", blockedWords))
 		resultString = "image is blacklisted"
 	}
 	imageFilterApiResponse.SetResult(resultString)
