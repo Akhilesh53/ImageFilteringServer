@@ -11,7 +11,7 @@ Image Filter API:
 
     heroku config:set GCP_CREDENTIALS="$(< ./imagefilterapi-config.json)" --app image-filtering-for-browser
 
-    heroku config:set GOOGLE_APPLICATION_CREDENTIALS=gcp-config.json --app image-filtering-for-browser
+    heroku config:set GOOGLE_APPLICATION_CREDENTIALS=api_keys_from_google_vision_api.json --app image-filtering-for-browser
 
    ```
 
